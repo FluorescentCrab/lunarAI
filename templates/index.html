@@ -1,0 +1,216 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO Object Detection with Flask</title>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content .center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+            .file-input-wrapper input[type="file"] {
+                flex-grow: 1;
+                padding: 0.5rem;
+                border: 1px solid #d1d5db;
+                border-radius: 0.5rem;
+            }
+
+        .btn {
+            background-color: #4f46e5;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+            .btn:hover {
+                background-color: #4338ca;
+            }
+
+        .message-box {
+            background-color: #fef2f2;
+            color: #ef4444;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid #ef4444;
+            margin-top: 1rem;
+            display: none; /* Hidden by default */
+        }
+
+        .image-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px; /* Placeholder height */
+            background-color: #e0e0e0;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            border: 1px solid #d1d5db;
+        }
+
+            .image-display img {
+                max-width: 100%;
+                height: auto;
+                border-radius: 0.75rem;
+            }
+
+        .detection-results {
+            margin-top: 1rem;
+            background-color: #f9fafb;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #e5e7eb;
+        }
+
+            .detection-results h3 {
+                font-size: 1.125rem;
+                font-weight: 700;
+                margin-bottom: 0.5rem;
+            }
+
+            .detection-results ul {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+
+            .detection-results li {
+                padding: 0.25rem 0;
+                border-bottom: 1px dotted #e5e7eb;
+            }
+
+                .detection-results li:last-child {
+                    border-bottom: none;
+                }
+    </style>
+</head>
+<body class="p-4">
+    <div class="container mx-auto">
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-4">YOLO Object Detection with Flask</h2>
+        <p class="text-gray-600 text-center mb-6">Upload an image to see mock object detection results.</p>
+
+        <form id="uploadForm" enctype="multipart/form-data" class="flex flex-col gap-4">
+            <div class="file-input-wrapper">
+                <input type="file" name="file" id="fileInput" accept="image/*" class="w-full text-gray-700">
+                <button type="submit" class="btn">Upload Image</button>
+            </div>
+        </form>
+
+        <div id="loadingIndicator" class="hidden text-center text-indigo-600 font-medium">
+            Processing image...
+        </div>
+
+        <div id="messageBox" class="message-box"></div>
+
+        <div class="image-display mt-6">
+            <img id="processedImage" src="[https://placehold.co/400x300/e0e0e0/ffffff?text=Upload+Image](https://placehold.co/400x300/e0e0e0/ffffff?text=Upload+Image)" alt="Processed Image" class="rounded-lg shadow-md">
+        </div>
+
+        <div id="detectionResults" class="detection-results hidden">
+            <h3 class="text-gray-700">Detection Results:</h3>
+            <ul id="detectionsList" class="text-gray-600">
+                <!-- Detections will be listed here -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const fileInput = document.getElementById('fileInput');
+            const processedImage = document.getElementById('processedImage');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const messageBox = document.getElementById('messageBox');
+            const detectionResultsDiv = document.getElementById('detectionResults');
+            const detectionsList = document.getElementById('detectionsList');
+
+            messageBox.style.display = 'none'; // Hide any previous messages
+            loadingIndicator.classList.remove('hidden'); // Show loading indicator
+            detectionResultsDiv.classList.add('hidden'); // Hide previous results
+
+            if (!fileInput.files.length) {
+                messageBox.textContent = 'Please select a file to upload.';
+                messageBox.style.display = 'block';
+                loadingIndicator.classList.add('hidden');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Something went wrong during upload.');
+                }
+
+                const data = await response.json();
+                processedImage.src = data.processed_image_url;
+                processedImage.alt = "Processed Image with Detections";
+
+                // Display detections
+                detectionsList.innerHTML = ''; // Clear previous
+                if (data.detections && data.detections.length > 0) {
+                    detectionResultsDiv.classList.remove('hidden');
+                    data.detections.forEach(detection => {
+                        const listItem = document.createElement('li');
+                        listItem.textContent = `${detection.label} (Confidence: ${detection.confidence})`;
+                        detectionsList.appendChild(listItem);
+                    });
+                } else {
+                    detectionResultsDiv.classList.remove('hidden');
+                    const listItem = document.createElement('li');
+                    listItem.textContent = 'No objects detected.';
+                    detectionsList.appendChild(listItem);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                messageBox.textContent = `Error: ${error.message}`;
+                messageBox.style.display = 'block';
+                processedImage.src = "[https://placehold.co/400x300/e0e0e0/ffffff?text=Error](https://placehold.co/400x300/e0e0e0/ffffff?text=Error)"; // Show error placeholder
+                detectionResultsDiv.classList.add('hidden'); // Hide results on error
+            } finally {
+                loadingIndicator.classList.add('hidden'); // Hide loading indicator
+            }
+        });
+    </script>
+</body>
+</html>
