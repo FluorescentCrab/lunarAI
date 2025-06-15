@@ -2,12 +2,12 @@
 made for iit dh lunar compeition
 
 */ Prequisuites /*
-install the following libraries and dependencies /n
-->pip install Flask
-->pip install opencv-python
-->pip install numpy
-->pip install ultralytics
-
+install the following libraries and dependencies </br>
+->pip install Flask  </br>
+->pip install opencv-python  </br>
+->pip install numpy  </br>
+->pip install ultralytics  </br>
+</br>
 */ Setup /*
 take the app.py ,index.html and model.pt and arrange them appropriately like following in the desired location =>
 luanr/app.py
