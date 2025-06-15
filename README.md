@@ -2,7 +2,7 @@
 made for iit dh lunar compeition
 
 */ Prequisuites /*
-install the following libraries and dependencies
+install the following libraries and dependencies /n
 ->pip install Flask
 ->pip install opencv-python
 ->pip install numpy
